@@ -3,6 +3,7 @@ import 'activos_page.dart';
 import 'prestamos_page.dart';
 import 'devoluciones_page.dart';
 import 'mantenimiento_page.dart';
+import 'historial_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -117,7 +118,7 @@ class HomePage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const DevolucionesPage(),
+                    builder: (context) => const HistorialPage(),
                   ),
                 );
               },

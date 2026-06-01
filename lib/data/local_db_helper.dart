@@ -1,11 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../models/asset.dart';
-import '../models/loan.dart';
-import '../models/asset_return.dart';
-import '../models/maintenance.dart';
-import '../models/history.dart';
-import '../models/user.dart';
 
 class LocalDbHelper {
   static final LocalDbHelper _instance = LocalDbHelper._internal();

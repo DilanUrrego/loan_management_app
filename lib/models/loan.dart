@@ -56,8 +56,8 @@ class Loan {
     };
   }
 
-  factory LoanModel.fromMap(Map<String, dynamic> map) {
-    return LoanModel(
+  factory Loan.fromMap(Map<String, dynamic> map) {
+    return Loan(
       id: map['id'],
       assetId: map['assetId'],
       requestedBy: map['requestedBy'],

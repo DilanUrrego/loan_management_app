@@ -46,8 +46,8 @@ class Maintenance {
     };
   }
 
-  factory MaintenanceModel.fromMap(Map<String, dynamic> map) {
-    return MaintenanceModel(
+  factory Maintenance.fromMap(Map<String, dynamic> map) {
+    return Maintenance(
       id: map['id'],
       assetId: map['assetId'],
       technician: map['technician'],

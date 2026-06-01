@@ -46,8 +46,8 @@ class History {
     };
   }
 
-  factory HistoryModel.fromMap(Map<String, dynamic> map) {
-    return HistoryModel(
+  factory History.fromMap(Map<String, dynamic> map) {
+    return History(
       id: map['id'],
       title: map['title'],
       description: map['description'],

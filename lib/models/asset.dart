@@ -41,8 +41,8 @@ class Asset {
     };
   }
 
-  factory AssetModel.fromMap(Map<String, dynamic> map) {
-    return AssetModel(
+  factory Asset.fromMap(Map<String, dynamic> map) {
+    return Asset(
       id: map['id'],
       name: map['name'],
       code: map['code'],

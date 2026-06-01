@@ -41,8 +41,8 @@ class AssetReturn {
     };
   }
 
-  factory ReturnModel.fromMap(Map<String, dynamic> map) {
-    return ReturnModel(
+  factory AssetReturn.fromMap(Map<String, dynamic> map) {
+    return AssetReturn(
       id: map['id'],
       loanId: map['loanId'],
       returnDate: DateTime.parse(map['returnDate']),

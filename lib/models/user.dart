@@ -17,6 +17,24 @@ class User {
     this.syncStatus = SyncStatus.pendingSync,
   });
 
+  User copyWith({
+    String? iud,
+    String? name,
+    String? email,
+    UserRole? role,
+    AccountStatus? status,
+    SyncStatus? syncStatus,
+  }) {
+    return User(
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,

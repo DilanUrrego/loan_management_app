@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'local_db_helper.dart';
 import 'firestore_service.dart';
 import '../models/asset.dart';
@@ -16,178 +17,165 @@ class CrudService {
   final LocalDbHelper _localDb = LocalDbHelper();
   final FirestoreService _firestore = FirestoreService();
 
-  // Helper method for sync
-  Future<void> _syncToFirestore(String table, String id, Map<String, dynamic> data) async {
+  Future<void> _insert(String table, String id, Map<String, dynamic> data) async {
+    if (kIsWeb) {
+      await _firestore.insert(table, id, data);
+    } else {
+      final localData = {...data, 'syncStatus': SyncStatus.pendingSync.index};
+      await _localDb.insert(table, localData);
+      _syncToFirestore(table, id, localData);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getAll(String table) async {
+    if (kIsWeb) {
+      return await _firestore.getAll(table);
+    } else {
+      return await _localDb.getAll(table);
+    }
+  }
+
+  Future<void> _update(
+      String table, String idColumn, String id, Map<String, dynamic> data) async {
+    if (kIsWeb) {
+      await _firestore.update(table, id, data);
+    } else {
+      final localData = {...data, 'syncStatus': SyncStatus.pendingSync.index};
+      await _localDb.update(table, idColumn, id, localData);
+      _syncToFirestore(table, id, localData);
+    }
+  }
+
+  Future<void> _delete(String table, String idColumn, String id) async {
+    if (kIsWeb) {
+      await _firestore.delete(table, id);
+    } else {
+      await _localDb.delete(table, idColumn, id);
+      try {
+        await _firestore.delete(table, id);
+      } catch (e) {
+        print('Error deleting $table from Firestore: $e');
+      }
+    }
+  }
+
+  Future<void> _syncToFirestore(
+      String table, String id, Map<String, dynamic> data) async {
     try {
       await _firestore.insert(table, id, data);
-      // Update local db to synced
-      data['syncStatus'] = SyncStatus.synced.index;
-      await _localDb.update(table, table == 'users' ? 'uid' : 'id', id, data);
+      final synced = {...data, 'syncStatus': SyncStatus.synced.index};
+      final idCol = table == 'users' ? 'uid' : 'id';
+      await _localDb.update(table, idCol, id, synced);
     } catch (e) {
-      // It stays as pendingSync if offline
-      print("Error syncing $table to Firestore: $e");
+      print('Error syncing $table to Firestore: $e');
     }
   }
 
   // --- USER CRUD ---
   Future<void> addUser(User user) async {
-    final data = user.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('users', data);
-    _syncToFirestore('users', user.uid, data);
+    await _insert('users', user.uid, user.toMap());
   }
-
+ 
   Future<List<User>> getUsers() async {
-    final data = await _localDb.getAll('users');
-    return data.map((map) => User.fromMap(map)).toList();
+    final data = await _getAll('users');
+    return data.map((m) => User.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateUser(User user) async {
-    final data = user.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('users', 'uid', user.uid, data);
-    _syncToFirestore('users', user.uid, data);
+    await _update('users', 'uid', user.uid, user.toMap());
   }
-
+ 
   Future<void> deleteUser(String uid) async {
-    await _localDb.delete('users', 'uid', uid);
-    try {
-      await _firestore.delete('users', uid);
-    } catch (e) {
-      print("Error deleting user from Firestore: $e");
-    }
+    await _delete('users', 'uid', uid);
   }
 
   // --- ASSETS CRUD ---
   Future<void> addAsset(Asset asset) async {
-    final data = asset.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('assets', data);
-    _syncToFirestore('assets', asset.id, data);
+    await _insert('assets', asset.id, asset.toMap());
   }
-
+ 
   Future<List<Asset>> getAssets() async {
-    final data = await _localDb.getAll('assets');
-    return data.map((map) => Asset.fromMap(map)).toList();
+    final data = await _getAll('assets');
+    return data.map((m) => Asset.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateAsset(Asset asset) async {
-    final data = asset.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('assets', 'id', asset.id, data);
-    _syncToFirestore('assets', asset.id, data);
+    await _update('assets', 'id', asset.id, asset.toMap());
   }
-
+ 
   Future<void> deleteAsset(String id) async {
-    await _localDb.delete('assets', 'id', id);
-    try {
-      await _firestore.delete('assets', id);
-    } catch (e) {
-      print("Error deleting asset from Firestore: $e");
-    }
+    await _delete('assets', 'id', id);
   }
 
   // --- LOANS CRUD ---
   Future<void> addLoan(Loan loan) async {
-    final data = loan.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('loans', data);
-    _syncToFirestore('loans', loan.id, data);
+    await _insert('loans', loan.id, loan.toMap());
   }
-
+ 
   Future<List<Loan>> getLoans() async {
-    final data = await _localDb.getAll('loans');
-    return data.map((map) => Loan.fromMap(map)).toList();
+    final data = await _getAll('loans');
+    return data.map((m) => Loan.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateLoan(Loan loan) async {
-    final data = loan.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('loans', 'id', loan.id, data);
-    _syncToFirestore('loans', loan.id, data);
+    await _update('loans', 'id', loan.id, loan.toMap());
   }
-
+ 
   Future<void> deleteLoan(String id) async {
-    await _localDb.delete('loans', 'id', id);
-    try {
-      await _firestore.delete('loans', id);
-    } catch (e) {
-      print("Error deleting loan from Firestore: $e");
-    }
+    await _delete('loans', 'id', id);
   }
 
   // --- RETURNS CRUD ---
   Future<void> addReturn(AssetReturn r) async {
-    final data = r.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('returns', data);
-    _syncToFirestore('returns', r.id, data);
+    await _insert('returns', r.id, r.toMap());
   }
-
+ 
   Future<List<AssetReturn>> getReturns() async {
-    final data = await _localDb.getAll('returns');
-    return data.map((map) => AssetReturn.fromMap(map)).toList();
+    final data = await _getAll('returns');
+    return data.map((m) => AssetReturn.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateReturn(AssetReturn r) async {
-    final data = r.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('returns', 'id', r.id, data);
-    _syncToFirestore('returns', r.id, data);
+    await _update('returns', 'id', r.id, r.toMap());
   }
-
+ 
   Future<void> deleteReturn(String id) async {
-    await _localDb.delete('returns', 'id', id);
-    try {
-      await _firestore.delete('returns', id);
-    } catch (e) {
-      print("Error deleting return from Firestore: $e");
-    }
+    await _delete('returns', 'id', id);
   }
 
   // --- MAINTENANCE CRUD ---
   Future<void> addMaintenance(Maintenance m) async {
-    final data = m.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('maintenances', data);
-    _syncToFirestore('maintenances', m.id, data);
+    await _insert('maintenances', m.id, m.toMap());
   }
-
+ 
   Future<List<Maintenance>> getMaintenances() async {
-    final data = await _localDb.getAll('maintenances');
-    return data.map((map) => Maintenance.fromMap(map)).toList();
+    final data = await _getAll('maintenances');
+    return data.map((m) => Maintenance.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateMaintenance(Maintenance m) async {
-    final data = m.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('maintenances', 'id', m.id, data);
-    _syncToFirestore('maintenances', m.id, data);
+    await _update('maintenances', 'id', m.id, m.toMap());
   }
-
+ 
   Future<void> deleteMaintenance(String id) async {
-    await _localDb.delete('maintenances', 'id', id);
-    try {
-      await _firestore.delete('maintenances', id);
-    } catch (e) {
-      print("Error deleting maintenance from Firestore: $e");
-    }
+    await _delete('maintenances', 'id', id);
   }
 
   // --- HISTORY CRUD ---
   Future<void> addHistory(History h) async {
-    final data = h.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.insert('history', data);
-    _syncToFirestore('history', h.id, data);
+    await _insert('history', h.id, h.toMap());
   }
-
+ 
   Future<List<History>> getHistories() async {
-    final data = await _localDb.getAll('history');
-    return data.map((map) => History.fromMap(map)).toList();
+    final data = await _getAll('history');
+    return data.map((m) => History.fromMap(m)).toList();
   }
-
+ 
   Future<void> updateHistory(History h) async {
-    final data = h.copyWith(syncStatus: SyncStatus.pendingSync).toMap();
-    await _localDb.update('history', 'id', h.id, data);
-    _syncToFirestore('history', h.id, data);
+    await _update('history', 'id', h.id, h.toMap());
   }
-
+ 
   Future<void> deleteHistory(String id) async {
-    await _localDb.delete('history', 'id', id);
-    try {
-      await _firestore.delete('history', id);
-    } catch (e) {
-      print("Error deleting history from Firestore: $e");
-    }
+    await _delete('history', 'id', id);
   }
 }

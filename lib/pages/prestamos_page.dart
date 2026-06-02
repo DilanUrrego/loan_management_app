@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/session_service.dart';
+import '../data/auth_service.dart';
 import '../models/loan.dart';
 import '../models/user.dart' as app_model;
 import '../widgets/prestamo_card.dart';
@@ -7,6 +8,7 @@ import 'solicitar_prestamo_page.dart';
 import '../validators/business_rules.dart';
 import '../controllers/prestamos_controller.dart';
 import '../widgets/dialogs/prestamo_dialogs.dart';
+import 'login_page.dart';
 
 class PrestamosPage extends StatefulWidget {
   final String? initialFilter;
@@ -106,6 +108,18 @@ class _PrestamosPageState extends State<PrestamosPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () => _controller.load(),
             tooltip: 'Actualizar',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await AuthService().logout();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),

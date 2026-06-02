@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../data/crud_service.dart';
 import '../data/session_service.dart';
+import '../data/auth_service.dart';
 import '../models/asset.dart';
 import '../widgets/asset_card.dart';
 import '../models/user.dart' as app_model;
@@ -9,6 +10,7 @@ import '../models/history.dart';
 import '../validators/form_validators.dart';
 import '../validators/business_rules.dart';
 import '../validators/app_constants.dart';
+import 'login_page.dart';
 
 class ActivosPage extends StatefulWidget {
   final String? initialFilter;
@@ -318,6 +320,18 @@ class _ActivosPageState extends State<ActivosPage> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadAssets,
             tooltip: 'Actualizar',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await AuthService().logout();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),

@@ -1,36 +1,21 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'pages/home_page.dart';
-import 'package:uuid/uuid.dart';
 import 'firebase_options.dart';
-import 'data/crud_service.dart';
-import 'data/session_service.dart';
-import 'models/asset.dart';
-import 'models/user.dart';
+import 'data/auth_service.dart';
+import 'data/db_init.dart';
+import 'pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
 
-//Simular sesión de admin
-  SessionService().setUser(User(
-    uid: 'admin-test',
-    name: 'Administrador',
-    email: 'admin@institucion.com',
-    role: UserRole.admin,
-    status: AccountStatus.active,
-  ));
+  // Inicializar sqflite FFI para Windows / Linux / macOS
+  if (!kIsWeb) {
+    await initDesktopDb();
+  }
 
-  // Crear un asset nuevo en cada ejecución para pruebas
-  final id = const Uuid().v4();
-  final numero = DateTime.now().millisecondsSinceEpoch % 10000;
-  await CrudService().addAsset(Asset(
-    id: id,
-    name: 'Laptop Dell #$numero',
-    code: 'ACT-$numero',
-    status: 'Disponible',
-  ));
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AuthService().init();
 
   runApp(const MyApp());
 }
@@ -44,9 +29,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Control de Activos',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.indigo,
+        fontFamily: 'Roboto',
       ),
-      home: const HomePage(),
+      home: const LoginPage(),
     );
   }
 }

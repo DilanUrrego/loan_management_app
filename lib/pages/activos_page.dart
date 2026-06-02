@@ -4,9 +4,15 @@ import '../data/crud_service.dart';
 import '../data/session_service.dart';
 import '../models/asset.dart';
 import '../widgets/asset_card.dart';
+import '../models/user.dart' as app_model;
+import '../models/history.dart';
+import '../validators/form_validators.dart';
+import '../validators/business_rules.dart';
+import '../validators/app_constants.dart';
 
 class ActivosPage extends StatefulWidget {
-  const ActivosPage({super.key});
+  final String? initialFilter;
+  const ActivosPage({super.key, this.initialFilter});
 
   @override
   State<ActivosPage> createState() => _ActivosPageState();
@@ -30,7 +36,19 @@ class _ActivosPageState extends State<ActivosPage> {
 
   Future<void> _loadAssets() async {
     setState(() => _loading = true);
-    final assets = await _crud.getAssets();
+    final role = _session.currentUser?.role;
+    var assets = await _crud.getAssets();
+
+    // Requesters solo pueden ver activos disponibles
+    if (role == app_model.UserRole.requester) {
+      assets = assets.where((a) => a.status == 'Disponible').toList();
+    }
+
+    if (widget.initialFilter != null) {
+      assets = assets.where((a) => a.status == widget.initialFilter).toList();
+      _searchController.text = widget.initialFilter!;
+    }
+
     setState(() {
       _assets = assets;
       _filtered = assets;
@@ -92,7 +110,7 @@ class _ActivosPageState extends State<ActivosPage> {
     String selectedStatus = 'Disponible';
     final formKey = GlobalKey<FormState>();
  
-    const statuses = ['Disponible', 'Mantenimiento', 'Baja'];
+    final statuses = AppConstants.returnStatuses; // ['Disponible', 'Mantenimiento', 'Baja']
  
     await showDialog(
       context: context,
@@ -118,9 +136,7 @@ class _ActivosPageState extends State<ActivosPage> {
                   TextFormField(
                     controller: nameCtrl,
                     decoration: _dialogInput('Nombre del activo', Icons.label),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Campo requerido'
-                        : null,
+                    validator: FormValidators.requiredField,
                   ),
                   const SizedBox(height: 14),
                   // Código
@@ -128,9 +144,7 @@ class _ActivosPageState extends State<ActivosPage> {
                     controller: codeCtrl,
                     decoration:
                         _dialogInput('Código (ej. ACT-010)', Icons.qr_code),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Campo requerido'
-                        : null,
+                    validator: FormValidators.requiredField,
                   ),
                   const SizedBox(height: 14),
                   // Estado
@@ -191,12 +205,14 @@ class _ActivosPageState extends State<ActivosPage> {
         code: code,
         status: status,
       );
-      await _crud.addAsset(asset);
+      bool synced = await _crud.addAsset(asset);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Activo "$name" creado exitosamente'),
-            backgroundColor: Colors.green,
+            content: Text(synced 
+                ? 'Activo "$name" creado exitosamente' 
+                : 'Activo "$name" guardado. Falta por sincronizar.'),
+            backgroundColor: synced ? Colors.green : Colors.orange,
           ),
         );
         await _loadAssets();
@@ -227,6 +243,58 @@ class _ActivosPageState extends State<ActivosPage> {
           const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );
   }
+
+  Future<void> _showEditStatusDialog(Asset asset) async {
+    String selectedStatus = asset.status;
+    final statuses = AppConstants.assetStatuses;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Cambiar Estado', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: DropdownButtonFormField<String>(
+            value: statuses.contains(selectedStatus) ? selectedStatus : 'Disponible',
+            decoration: _dialogInput('Estado', Icons.toggle_on),
+            items: statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+            onChanged: (v) => setDialogState(() => selectedStatus = v!),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true && selectedStatus != asset.status) {
+      final updated = asset.copyWith(status: selectedStatus);
+      await _crud.updateAsset(updated);
+      
+      await _crud.addHistory(History(
+        id: const Uuid().v4(),
+        title: 'Estado de activo actualizado',
+        description: 'El activo "${asset.name}" cambió de ${asset.status} a $selectedStatus',
+        date: DateTime.now(),
+        type: 'info',
+      ));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Estado actualizado a $selectedStatus'), backgroundColor: Colors.green),
+        );
+        _loadAssets();
+      }
+    }
+  }
  
   @override
   void dispose() {
@@ -236,9 +304,9 @@ class _ActivosPageState extends State<ActivosPage> {
  
   @override
   Widget build(BuildContext context) {
-    //final isAdmin = _session.isAdmin;
-    final isAdmin = true;
- 
+    final role = _session.currentUser?.role;
+    final canCreate = BusinessRules.canCreateAsset(role);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F9),
       appBar: AppBar(
@@ -285,18 +353,21 @@ class _ActivosPageState extends State<ActivosPage> {
                             style: TextStyle(color: Colors.grey)))
                     : ListView.separated(
                         padding: EdgeInsets.fromLTRB(
-                            16, 16, 16, isAdmin ? 90 : 16),
+                            16, 16, 16, canCreate ? 90 : 16),
                         itemCount: _filtered.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: 12),
                         itemBuilder: (_, i) {
                           final a = _filtered[i];
-                          return AssetCard(
-                            nombre: a.name,
-                            codigo: a.code,
-                            estado: a.status,
-                            colorEstado: _colorForStatus(a.status),
-                            icono: _iconForStatus(a.status),
+                          return GestureDetector(
+                            onTap: canCreate ? () => _showEditStatusDialog(a) : null,
+                            child: AssetCard(
+                              nombre: a.name,
+                              codigo: a.code,
+                              estado: a.status,
+                              colorEstado: _colorForStatus(a.status),
+                              icono: _iconForStatus(a.status),
+                            ),
                           );
                         },
                       ),
@@ -304,8 +375,8 @@ class _ActivosPageState extends State<ActivosPage> {
         ],
       ),
  
-      // ── Botón crear activo (solo admin, abajo a la izquierda) ─────────────
-      floatingActionButton: isAdmin
+      // ── Botón crear activo (admin e inventory manager, abajo a la izquierda) ─────────────
+      floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: _showCreateDialog,
               backgroundColor: Colors.indigo,

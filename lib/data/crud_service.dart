@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'local_db_helper.dart';
 import 'firestore_service.dart';
@@ -17,13 +18,25 @@ class CrudService {
   final LocalDbHelper _localDb = LocalDbHelper();
   final FirestoreService _firestore = FirestoreService();
 
-  Future<void> _insert(String table, String id, Map<String, dynamic> data) async {
+  Future<bool> _insert(String table, String id, Map<String, dynamic> data) async {
     if (kIsWeb) {
-      await _firestore.insert(table, id, data);
+      try {
+        await _firestore.insert(table, id, data);
+        return true;
+      } on TimeoutException {
+        return false; // Offline
+      }
     } else {
       final localData = {...data, 'syncStatus': SyncStatus.pendingSync.index};
       await _localDb.insert(table, localData);
-      _syncToFirestore(table, id, localData);
+      try {
+        await _syncToFirestore(table, id, localData).timeout(const Duration(seconds: 3));
+        return true;
+      } on TimeoutException {
+        return false;
+      } catch (e) {
+        return false;
+      }
     }
   }
 
@@ -35,14 +48,26 @@ class CrudService {
     }
   }
 
-  Future<void> _update(
+  Future<bool> _update(
       String table, String idColumn, String id, Map<String, dynamic> data) async {
     if (kIsWeb) {
-      await _firestore.update(table, id, data);
+      try {
+        await _firestore.update(table, id, data);
+        return true;
+      } on TimeoutException {
+        return false;
+      }
     } else {
       final localData = {...data, 'syncStatus': SyncStatus.pendingSync.index};
       await _localDb.update(table, idColumn, id, localData);
-      _syncToFirestore(table, id, localData);
+      try {
+        await _syncToFirestore(table, id, localData).timeout(const Duration(seconds: 3));
+        return true;
+      } on TimeoutException {
+        return false;
+      } catch (e) {
+        return false;
+      }
     }
   }
 
@@ -61,14 +86,10 @@ class CrudService {
 
   Future<void> _syncToFirestore(
       String table, String id, Map<String, dynamic> data) async {
-    try {
-      await _firestore.insert(table, id, data);
-      final synced = {...data, 'syncStatus': SyncStatus.synced.index};
-      final idCol = table == 'users' ? 'uid' : 'id';
-      await _localDb.update(table, idCol, id, synced);
-    } catch (e) {
-      print('Error syncing $table to Firestore: $e');
-    }
+    await _firestore.insert(table, id, data);
+    final synced = {...data, 'syncStatus': SyncStatus.synced.index};
+    final idCol = table == 'users' ? 'uid' : 'id';
+    await _localDb.update(table, idCol, id, synced);
   }
 
   // --- USER CRUD ---
@@ -90,8 +111,8 @@ class CrudService {
   }
 
   // --- ASSETS CRUD ---
-  Future<void> addAsset(Asset asset) async {
-    await _insert('assets', asset.id, asset.toMap());
+  Future<bool> addAsset(Asset asset) async {
+    return await _insert('assets', asset.id, asset.toMap());
   }
  
   Future<List<Asset>> getAssets() async {
@@ -99,8 +120,8 @@ class CrudService {
     return data.map((m) => Asset.fromMap(m)).toList();
   }
  
-  Future<void> updateAsset(Asset asset) async {
-    await _update('assets', 'id', asset.id, asset.toMap());
+  Future<bool> updateAsset(Asset asset) async {
+    return await _update('assets', 'id', asset.id, asset.toMap());
   }
  
   Future<void> deleteAsset(String id) async {
@@ -108,8 +129,8 @@ class CrudService {
   }
 
   // --- LOANS CRUD ---
-  Future<void> addLoan(Loan loan) async {
-    await _insert('loans', loan.id, loan.toMap());
+  Future<bool> addLoan(Loan loan) async {
+    return await _insert('loans', loan.id, loan.toMap());
   }
  
   Future<List<Loan>> getLoans() async {
@@ -162,8 +183,8 @@ class CrudService {
   }
 
   // --- HISTORY CRUD ---
-  Future<void> addHistory(History h) async {
-    await _insert('history', h.id, h.toMap());
+  Future<bool> addHistory(History h) async {
+    return await _insert('history', h.id, h.toMap());
   }
  
   Future<List<History>> getHistories() async {

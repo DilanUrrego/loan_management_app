@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/crud_service.dart';
+import '../data/session_service.dart';
 import '../models/history.dart';
+import '../models/user.dart' as app_model;
 import '../widgets/historial_card.dart';
 
 class HistorialPage extends StatefulWidget {
@@ -12,6 +14,7 @@ class HistorialPage extends StatefulWidget {
 
 class _HistorialPageState extends State<HistorialPage> {
   final _crud = CrudService();
+  final _session = SessionService();
   final _searchCtrl = TextEditingController();
 
   List<History> _all = [];
@@ -33,7 +36,16 @@ class _HistorialPageState extends State<HistorialPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final histories = await _crud.getHistories();
+    var histories = await _crud.getHistories();
+    
+    final role = _session.currentUser?.role;
+    final currentUser = _session.currentUser;
+
+    if (role == app_model.UserRole.requester && currentUser != null) {
+      // Requesters solo ven el historial que los menciona (ej. préstamos)
+      histories = histories.where((h) => h.description.contains(currentUser.name)).toList();
+    }
+
     histories.sort((a, b) => b.date.compareTo(a.date));
     setState(() {
       _all = histories;

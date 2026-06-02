@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -9,6 +10,7 @@ class LocalDbHelper {
   Database? _database;
 
   Future<Database> get database async {
+    if (kIsWeb) throw UnsupportedError('SQLite no está disponible en web.');
     if (_database != null) return _database!;
     _database = await _initDb();
     return _database!;

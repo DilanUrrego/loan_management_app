@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
@@ -13,12 +14,14 @@ class FirestoreService {
   // --- GENERIC CRUD OPERATIONS ---
 
   Future<void> insert(String collection, String id, Map<String, dynamic> data) async {
-    await _db.collection(collection).doc(id).set(_clean(data), SetOptions(merge: true));
+    await _db.collection(collection).doc(id).set(_clean(data), SetOptions(merge: true))
+      .timeout(const Duration(seconds: 3));
   }
 
   // Usa set+merge en lugar de update para evitar error si el doc no existe
   Future<void> update(String collection, String id, Map<String, dynamic> data) async {
-    await _db.collection(collection).doc(id).set(_clean(data), SetOptions(merge: true));
+    await _db.collection(collection).doc(id).set(_clean(data), SetOptions(merge: true))
+      .timeout(const Duration(seconds: 3));
   }
 
   Future<void> delete(String collection, String id) async {

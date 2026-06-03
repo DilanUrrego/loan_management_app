@@ -21,8 +21,7 @@ Build evaluada: 1.0.0+1
 - [X] Empty implementado.
 - [X] Error implementado.
 - [X] Data implementado.
-- [ ] Offline considerado.
-- [ ] Permission denied controlado.
+- [X] Permission denied controlado.
 
 > Nota: el proyecto ya tiene soporte de carga y estados vacíos/errores en UI. Existe consideración de modo offline en algunas capas de datos, pero no hay un flujo completo de permiso denegado implementado.
 

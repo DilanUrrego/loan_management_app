@@ -28,7 +28,10 @@ Release Candidate que contiene el conjunto mínimo viable de funcionalidades par
 - Hasta: `<commit-hash-actual>`
 
 ## Pruebas realizadas (resumen)
-- Tests unitarios: agregar aquí resultados de `flutter test` (pendiente ejecutar).
+- Tests unitarios y de widgets existentes en el proyecto:
+  - `test/unit/business_rules_test.dart`
+  - `test/widget/ui_states_test.dart`
+- `flutter test` debe ejecutarse para confirmar el estado actual de la suite.
 - Pruebas manuales realizadas: login, solicitud de préstamo, devolución con novedad, verificación de cambio de estado.
 - Matriz de pruebas asociada: [matriz_pruebas.md](matriz_pruebas.md#L1)
 

@@ -145,3 +145,8 @@ Si quieres, puedo:
 ---
 
 README generado y estructurado por el equipo de desarrollo.
+
+**Documentación de pruebas**
+
+La documentación centralizada de pruebas se encuentra en: [pruebas.md](pruebas.md)
+

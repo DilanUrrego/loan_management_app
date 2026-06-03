@@ -53,7 +53,6 @@ class LocalDbHelper {
         assetId TEXT,
         requestedBy TEXT,
         approvedBy TEXT,
-        approvedBy TEXT,
         loanDate TEXT,
         dueDate TEXT,
         status INTEGER,
